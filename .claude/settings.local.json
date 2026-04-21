@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Users/Daming/AppData/Local/flutter/bin/flutter\" --version)",
+      "Bash(cmd.exe /c \"flutter --version\")",
+      "Bash(cmd.exe /c \"dir C:\\\\Users\\\\Daming\\\\AppData\\\\Local\\\\flutter\\\\bin\")",
+      "Bash(cmd.exe /c \"dir C:\\\\Users\\\\Daming\\\\AppData\\\\Local\\\\flutter\")",
+      "PowerShell(flutter --version 2>&1)",
+      "Bash(/c/flutter/bin/flutter --version)",
+      "Bash(/c/flutter/bin/flutter create *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
