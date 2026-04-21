@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { Language } from '../store/useAppStore';
 
 const WHISPER_LANG: Record<Language, string> = {
@@ -12,8 +11,6 @@ export async function transcribeAudio(
   language: Language,
   apiKey: string,
 ): Promise<string> {
-  const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-
   const formData = new FormData();
   formData.append('file', {
     uri: audioUri,
@@ -29,7 +26,11 @@ export async function transcribeAudio(
     body: formData,
   });
 
-  if (!response.ok) throw new Error(`Whisper error: ${response.status}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message ?? `Whisper error ${response.status}`);
+  }
+
   const data = await response.json();
   return data.text?.trim() ?? '';
 }

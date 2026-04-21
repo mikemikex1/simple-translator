@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { Language } from '../store/useAppStore';
 
 const LANG_NAMES: Record<Language, string> = {
@@ -7,32 +6,36 @@ const LANG_NAMES: Record<Language, string> = {
   ja: 'Japanese',
 };
 
-let client: OpenAI | null = null;
-
-function getClient(apiKey: string): OpenAI {
-  if (!client || (client as any).apiKey !== apiKey) {
-    client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-  }
-  return client;
-}
-
 export async function translateText(
   text: string,
   fromLang: Language,
   toLang: Language,
   apiKey: string,
 ): Promise<string> {
-  const openai = getClient(apiKey);
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: `You are a translator. Translate the user's text from ${LANG_NAMES[fromLang]} to ${LANG_NAMES[toLang]}. Output only the translated text, no explanations.`,
-      },
-      { role: 'user', content: text },
-    ],
-    temperature: 0.3,
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a translator. Translate the user's text from ${LANG_NAMES[fromLang]} to ${LANG_NAMES[toLang]}. Output only the translated text, no explanations.`,
+        },
+        { role: 'user', content: text },
+      ],
+    }),
   });
-  return response.choices[0].message.content?.trim() ?? '';
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message ?? `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content?.trim() ?? '';
 }
