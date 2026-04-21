@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,36 +10,38 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../store/useAppStore';
 
-const KEY_STORE = 'openai_api_key';
+const OPENAI_KEY_STORE = 'openai_api_key';
 
 export default function SettingsScreen() {
   const { apiKey, setApiKey } = useAppStore();
-  const [draft, setDraft] = useState(apiKey);
+  const [openAiDraft, setOpenAiDraft] = useState(apiKey);
 
   useEffect(() => {
-    SecureStore.getItemAsync(KEY_STORE).then((val) => {
-      if (val) {
-        setApiKey(val);
-        setDraft(val);
+    SecureStore.getItemAsync(OPENAI_KEY_STORE).then((openAiKey) => {
+      if (openAiKey) {
+        setApiKey(openAiKey);
+        setOpenAiDraft(openAiKey);
       }
     });
-  }, []);
+  }, [setApiKey]);
 
   async function save() {
-    const trimmed = draft.trim();
-    if (!trimmed.startsWith('sk-')) {
-      Alert.alert('格式錯誤', 'OpenAI API Key 應以 sk- 開頭');
+    const openAi = openAiDraft.trim();
+
+    if (!openAi.startsWith('sk-')) {
+      Alert.alert('Invalid OpenAI Key', 'OpenAI API Key should start with sk-.');
       return;
     }
-    await SecureStore.setItemAsync(KEY_STORE, trimmed);
-    setApiKey(trimmed);
-    Alert.alert('已儲存', 'API Key 儲存成功');
+
+    await SecureStore.setItemAsync(OPENAI_KEY_STORE, openAi);
+    setApiKey(openAi);
+    Alert.alert('Saved', 'OpenAI API key has been saved.');
   }
 
   async function clear() {
-    await SecureStore.deleteItemAsync(KEY_STORE);
+    await SecureStore.deleteItemAsync(OPENAI_KEY_STORE);
     setApiKey('');
-    setDraft('');
+    setOpenAiDraft('');
   }
 
   return (
@@ -47,23 +49,26 @@ export default function SettingsScreen() {
       <Text style={styles.title}>OpenAI API Key</Text>
       <TextInput
         style={styles.input}
-        value={draft}
-        onChangeText={setDraft}
+        value={openAiDraft}
+        onChangeText={setOpenAiDraft}
         placeholder="sk-..."
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
       />
+
       <TouchableOpacity style={styles.saveBtn} onPress={save}>
-        <Text style={styles.saveBtnText}>儲存</Text>
+        <Text style={styles.saveBtnText}>Save Key</Text>
       </TouchableOpacity>
+
       {apiKey ? (
         <TouchableOpacity style={styles.clearBtn} onPress={clear}>
-          <Text style={styles.clearBtnText}>清除 Key</Text>
+          <Text style={styles.clearBtnText}>Clear Key</Text>
         </TouchableOpacity>
       ) : null}
+
       <Text style={styles.note}>
-        Key 以加密方式儲存於裝置，不會上傳至任何伺服器。
+        OpenAI key is used for translation and speech features.
       </Text>
     </View>
   );
@@ -91,5 +96,5 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   clearBtn: { alignItems: 'center', paddingVertical: 8 },
   clearBtnText: { color: '#e53935', fontSize: 14 },
-  note: { color: '#aaa', fontSize: 12, lineHeight: 18 },
+  note: { color: '#777', fontSize: 12, lineHeight: 18 },
 });

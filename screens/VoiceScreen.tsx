@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import RecordButton from '../components/RecordButton';
 import { useRecording } from '../hooks/useRecording';
@@ -10,12 +10,26 @@ interface VoiceResult {
   translated: string;
 }
 
-export default function VoiceScreen() {
+interface VoiceScreenProps {
+  isActive: boolean;
+}
+
+export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   const { recording, transcribing, error: recErr, startRecording, stopRecording } = useRecording();
   const { translate, loading, error: transErr } = useTranslation();
   const [results, setResults] = useState<VoiceResult[]>([]);
 
+  useEffect(() => {
+    if (!isActive && recording) {
+      stopRecording({ shouldTranscribe: false });
+    }
+  }, [isActive, recording, stopRecording]);
+
   async function handlePressOut() {
+    if (!isActive) {
+      await stopRecording({ shouldTranscribe: false });
+      return;
+    }
     const text = await stopRecording();
     if (!text) return;
     const translated = await translate(text);
