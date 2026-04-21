@@ -25,6 +25,21 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SimpleTranslator to access your camera for OCR translation."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow SimpleTranslator to access your microphone for voice translation."
+        }
+      ]
+    ]
   }
 }
