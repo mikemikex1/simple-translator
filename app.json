@@ -28,7 +28,9 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
       ],
       "package": "com.anonymous.SimpleTranslator"
     },
@@ -37,6 +39,13 @@
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow SimpleTranslator to access your photos for OCR translation.",
+          "cameraPermission": "Allow SimpleTranslator to use the camera for OCR translation."
+        }
+      ],
       [
         "expo-speech-recognition",
         {
