@@ -96,6 +96,16 @@ npx tsc --noEmit
 
 ## 七、Release 與產物
 
+建議一鍵打包（含鎖檔修復）：
+```bash
+npm run build:release:apk
+```
+
+只修鎖檔（`.git` / `.gradle`）：
+```bash
+npm run fix:locks
+```
+
 APK（Release）：
 ```bash
 cd android
@@ -120,6 +130,7 @@ gradlew.bat bundleRelease
 - 目前 release build 使用 debug signing，僅適合測試分發。
 - 若要上 Google Play，需改為正式 keystore 簽章。
 - App icon 更新後若手機不顯示新圖示，請先移除舊版 App 再安裝。
+- 若 Windows 發生 Gradle transforms lock，請優先使用 `npm run build:release:apk`（已固定單工參數與可自訂快取路徑）。
 
 ## 九、已知問題與建議
 

@@ -132,6 +132,23 @@ EXPO_PUBLIC_MYMEMORY_EMAIL=you@example.com
 
 ## 打包 Release
 
+### 一鍵修鎖並打包 APK（建議）
+
+```bash
+npm run build:release:apk
+```
+
+說明：
+- 自動修復 `.git` 與 Gradle 常見鎖檔問題
+- 預設使用專案內 `.gradle-local`（可透過 `-GradleHome` 自訂快取路徑）
+- 自動輸出 release APK
+
+### 只修復鎖檔
+
+```bash
+npm run fix:locks
+```
+
 ### Release APK
 
 ```bash

@@ -9,7 +9,9 @@
     "web": "expo start --web",
     "start:localhost": "expo start --localhost",
     "start:tunnel": "expo start --tunnel",
-    "start:clear": "expo start --lan --clear"
+    "start:clear": "expo start --lan --clear",
+    "fix:locks": "powershell -ExecutionPolicy Bypass -File scripts/fix-locks.ps1",
+    "build:release:apk": "powershell -ExecutionPolicy Bypass -File scripts/release-apk.ps1"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
