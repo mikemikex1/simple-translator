@@ -11,6 +11,7 @@
     "start:tunnel": "expo start --tunnel",
     "start:clear": "expo start --lan --clear",
     "fix:locks": "powershell -ExecutionPolicy Bypass -File scripts/fix-locks.ps1",
+    "fix:git:acl:admin": "powershell -ExecutionPolicy Bypass -File scripts/fix-git-acl-admin.ps1",
     "build:release:apk": "powershell -ExecutionPolicy Bypass -File scripts/release-apk.ps1"
   },
   "dependencies": {

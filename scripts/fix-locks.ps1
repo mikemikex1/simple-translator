@@ -3,7 +3,8 @@ param(
   [string]$GradleHome = "",
   [switch]$FixGit = $true,
   [switch]$FixGradle = $true,
-  [switch]$KillJava
+  [switch]$KillJava,
+  [switch]$KillGit = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,11 +21,16 @@ function Test-IsAdmin {
 }
 
 function Repair-GitLocks {
-  param([string]$Root)
+  param([string]$Root, [switch]$StopGit)
   $gitDir = Join-Path $Root ".git"
   if (-not (Test-Path $gitDir)) {
     Write-Step ".git directory not found, skipped."
     return
+  }
+
+  if ($StopGit) {
+    Write-Step "Stopping git processes."
+    Get-Process git -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
   }
 
   if (Test-IsAdmin) {
@@ -66,7 +72,13 @@ function Repair-GradleLocks {
   param([string]$Root, [string]$PrimaryGradleHome, [switch]$StopJava)
   $androidDir = Join-Path $Root "android"
   $gradlew = Join-Path $androidDir "gradlew.bat"
-  $cacheRoots = @((Join-Path $Root ".gradle-local"), $PrimaryGradleHome) | Select-Object -Unique
+  $tempRoot = if ($env:TEMP) { Join-Path $env:TEMP "SimpleTranslator\gradle-cache" } else { $null }
+  $cacheRoots = @(
+    $PrimaryGradleHome,
+    $tempRoot,
+    "C:\gradle-cache-st",
+    (Join-Path $Root ".gradle-local")
+  ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
 
   if ((Test-Path $gradlew) -and (Test-Path $androidDir)) {
     foreach ($gradleHomePath in $cacheRoots) {
@@ -115,11 +127,15 @@ function Repair-GradleLocks {
 Write-Step "Project root: $ProjectRoot"
 
 if ([string]::IsNullOrWhiteSpace($GradleHome)) {
-  $GradleHome = Join-Path $ProjectRoot ".gradle-local"
+  if ($env:TEMP) {
+    $GradleHome = Join-Path $env:TEMP "SimpleTranslator\gradle-cache"
+  } else {
+    $GradleHome = Join-Path $ProjectRoot ".gradle-local"
+  }
 }
 
 if ($FixGit) {
-  Repair-GitLocks -Root $ProjectRoot
+  Repair-GitLocks -Root $ProjectRoot -StopGit:$KillGit
 }
 if ($FixGradle) {
   Repair-GradleLocks -Root $ProjectRoot -PrimaryGradleHome $GradleHome -StopJava:$KillJava

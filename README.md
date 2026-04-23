@@ -140,7 +140,7 @@ npm run build:release:apk
 
 說明：
 - 自動修復 `.git` 與 Gradle 常見鎖檔問題
-- 預設使用專案內 `.gradle-local`（可透過 `-GradleHome` 自訂快取路徑）
+- 預設使用 `%TEMP%\SimpleTranslator\gradle-cache`，並自動 fallback 其他快取路徑
 - 自動輸出 release APK
 
 ### 只修復鎖檔
@@ -148,6 +148,15 @@ npm run build:release:apk
 ```bash
 npm run fix:locks
 ```
+
+### 一次性修復 `.git` ACL（需系統管理員）
+
+```bash
+npm run fix:git:acl:admin
+```
+
+適用情況：
+- `fatal: Unable to create .git/index.lock: Permission denied`
 
 ### Release APK
 

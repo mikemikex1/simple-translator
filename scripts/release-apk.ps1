@@ -32,10 +32,12 @@ function Resolve-GradleHome {
     return @($Preferred)
   }
 
+  $tempCache = if ($env:TEMP) { Join-Path $env:TEMP "SimpleTranslator\gradle-cache" } else { $null }
   $candidates = @(
+    $tempCache,
     (Join-Path $env:LOCALAPPDATA "SimpleTranslator\gradle-cache"),
-    (Join-Path $Root ".gradle-local"),
-    "C:\gradle-cache-st"
+    "C:\gradle-cache-st",
+    (Join-Path $Root ".gradle-local")
   ) | Select-Object -Unique
 
   return $candidates
@@ -65,7 +67,7 @@ foreach ($candidate in $candidateHomes) {
   $usedGradleHome = $candidate
   if (-not $SkipLockFix) {
     Write-Step "Running lock repair script. GradleHome=$candidate"
-    & (Join-Path $PSScriptRoot "fix-locks.ps1") -ProjectRoot $ProjectRoot -GradleHome $candidate -FixGit -FixGradle
+    & (Join-Path $PSScriptRoot "fix-locks.ps1") -ProjectRoot $ProjectRoot -GradleHome $candidate -FixGit -FixGradle -KillGit -KillJava
   }
 
   $env:GRADLE_USER_HOME = $candidate

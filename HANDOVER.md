@@ -106,6 +106,11 @@ npm run build:release:apk
 npm run fix:locks
 ```
 
+若 `.git/index.lock` 權限被破壞（需系統管理員）：
+```bash
+npm run fix:git:acl:admin
+```
+
 APK（Release）：
 ```bash
 cd android
@@ -130,7 +135,7 @@ gradlew.bat bundleRelease
 - 目前 release build 使用 debug signing，僅適合測試分發。
 - 若要上 Google Play，需改為正式 keystore 簽章。
 - App icon 更新後若手機不顯示新圖示，請先移除舊版 App 再安裝。
-- 若 Windows 發生 Gradle transforms lock，請優先使用 `npm run build:release:apk`（已固定單工參數與可自訂快取路徑）。
+- 若 Windows 發生 Gradle transforms lock，請優先使用 `npm run build:release:apk`（已固定單工參數與多快取 fallback 路徑）。
 
 ## 九、已知問題與建議
 
