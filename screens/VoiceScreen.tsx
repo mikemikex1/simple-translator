@@ -15,26 +15,22 @@ interface VoiceScreenProps {
 }
 
 export default function VoiceScreen({ isActive }: VoiceScreenProps) {
-  const { recording, transcribing, error: recErr, startRecording, stopRecording } = useRecording();
+  const { listening, transcribing, error: recErr, startListening, stopListening } = useRecording();
   const { translate, loading, error: transErr } = useTranslation();
   const [results, setResults] = useState<VoiceResult[]>([]);
 
   useEffect(() => {
-    if (!isActive && recording) {
-      stopRecording({ shouldTranscribe: false });
+    if (!isActive && listening) {
+      stopListening();
     }
-  }, [isActive, recording, stopRecording]);
+  }, [isActive]);
 
   async function handlePressOut() {
-    if (!isActive) {
-      await stopRecording({ shouldTranscribe: false });
-      return;
-    }
-    const text = await stopRecording();
+    const text = await stopListening();
     if (!text) return;
     const translated = await translate(text);
     if (translated) {
-      setResults((prev) => [
+      setResults((prev: VoiceResult[]) => [
         { id: Date.now().toString(), original: text, translated },
         ...prev,
       ]);
@@ -48,12 +44,14 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
     <View style={styles.container}>
       <View style={styles.btnArea}>
         <RecordButton
-          recording={!!recording}
+          recording={listening}
           transcribing={busy}
-          onPressIn={startRecording}
+          onPressIn={startListening}
           onPressOut={handlePressOut}
         />
-        <Text style={styles.hint}>按住錄音，放開自動翻譯</Text>
+        <Text style={styles.hint}>
+          {listening ? '聆聽中...' : busy ? '處理中...' : '按住錄音，放開自動翻譯'}
+        </Text>
         {error && <Text style={styles.error}>{error}</Text>}
       </View>
       <ScrollView style={styles.results} contentContainerStyle={styles.resultContent}>

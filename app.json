@@ -29,9 +29,10 @@
     "plugins": [
       "expo-secure-store",
       [
-        "expo-av",
+        "expo-speech-recognition",
         {
-          "microphonePermission": "Allow SimpleTranslator to access your microphone for voice translation."
+          "microphonePermission": "Allow SimpleTranslator to access your microphone for voice translation.",
+          "speechRecognitionPermission": "Allow SimpleTranslator to use speech recognition."
         }
       ]
     ]

@@ -1,6 +1,14 @@
 import { useState } from 'react';
+import * as Speech from 'expo-speech';
 import { translateText } from '../services/translateService';
 import { useAppStore } from '../store/useAppStore';
+import type { Language } from '../store/useAppStore';
+
+const TTS_LANG: Record<Language, string> = {
+  zh: 'zh-TW',
+  en: 'en-US',
+  ja: 'ja-JP',
+};
 
 export function useTranslation() {
   const [loading, setLoading] = useState(false);
@@ -24,6 +32,7 @@ export function useTranslation() {
         toLang: targetLang,
         timestamp: Date.now(),
       });
+      Speech.speak(result, { language: TTS_LANG[targetLang], rate: 1.0 });
       return result;
     } catch (e: any) {
       setError(e.message ?? 'Translation failed');

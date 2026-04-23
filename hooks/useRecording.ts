@@ -1,65 +1,75 @@
-import { useState, useRef } from 'react';
-import { Audio } from 'expo-av';
-import { transcribeAudio } from '../services/speechService';
+import { useState, useEffect, useRef } from 'react';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 import { useAppStore } from '../store/useAppStore';
+import type { Language } from '../store/useAppStore';
 
-interface StopOptions {
-  shouldTranscribe?: boolean;
-}
+const LANG_CODE: Record<Language, string> = {
+  zh: 'zh-TW',
+  en: 'en-US',
+  ja: 'ja-JP',
+};
 
 export function useRecording() {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [listening, setListening] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { sourceLang, apiKey } = useAppStore();
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const { sourceLang } = useAppStore();
+  const resolveRef = useRef<((text: string | null) => void) | null>(null);
+  const partialRef = useRef<string>('');
 
-  async function startRecording() {
+  useSpeechRecognitionEvent('result', (event) => {
+    const best = event.results?.[0]?.transcript ?? '';
+    partialRef.current = best;
+    if (event.isFinal && resolveRef.current) {
+      resolveRef.current(best || null);
+      resolveRef.current = null;
+    }
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    setError(event.message ?? 'Speech recognition error');
+    resolveRef.current?.(partialRef.current || null);
+    resolveRef.current = null;
+    setListening(false);
+    setTranscribing(false);
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    setListening(false);
+    // Resolve with whatever partial text was captured if not yet resolved
+    if (resolveRef.current) {
+      resolveRef.current(partialRef.current || null);
+      resolveRef.current = null;
+    }
+    setTranscribing(false);
+  });
+
+  async function startListening() {
     setError(null);
-    await Audio.requestPermissionsAsync();
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    partialRef.current = '';
+    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!granted) {
+      setError('需要麥克風權限');
+      return;
+    }
+    ExpoSpeechRecognitionModule.start({
+      lang: LANG_CODE[sourceLang],
+      interimResults: true,
+      continuous: false,
     });
-    const { recording: rec } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY,
-    );
-    recordingRef.current = rec;
-    setRecording(rec);
+    setListening(true);
   }
 
-  async function stopRecording(options: StopOptions = {}): Promise<string | null> {
-    const { shouldTranscribe = true } = options;
-    const rec = recordingRef.current;
-    if (!rec) return null;
-    try {
-      await rec.stopAndUnloadAsync();
-    } catch {
-      // Ignore stop race when recording is already stopped by lifecycle change.
-    }
-    recordingRef.current = null;
-    setRecording(null);
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-    });
-
-    if (!shouldTranscribe) return null;
-
-    const uri = rec.getURI();
-    if (!uri || !apiKey) return null;
-
+  async function stopListening(): Promise<string | null> {
     setTranscribing(true);
-    try {
-      return await transcribeAudio(uri, sourceLang, apiKey);
-    } catch (e: any) {
-      setError(e.message ?? 'Transcription failed');
-      return null;
-    } finally {
-      setTranscribing(false);
-    }
+    return new Promise((resolve) => {
+      resolveRef.current = resolve;
+      ExpoSpeechRecognitionModule.stop();
+    });
   }
 
-  return { recording, transcribing, error, startRecording, stopRecording };
+  return { listening, transcribing, error, startListening, stopListening };
 }
