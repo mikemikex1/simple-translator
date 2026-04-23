@@ -1,12 +1,20 @@
 ﻿import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type Language = 'zh' | 'en' | 'ja';
+export type Language = 'zh' | 'en' | 'ja' | 'vi' | 'ko' | 'pt' | 'es' | 'ru' | 'nan' | 'fr' | 'de';
 
 export const LANGUAGE_LABELS: Record<Language, string> = {
   zh: '中文',
   en: 'English',
   ja: '日本語',
+  vi: 'Tiếng Việt',
+  ko: '한국어',
+  pt: 'Português',
+  es: 'Español',
+  ru: 'Русский',
+  nan: '台語',
+  fr: 'Français',
+  de: 'Deutsch',
 };
 
 export interface Message {
@@ -30,6 +38,20 @@ interface AppState {
   clearMessages: () => void;
   loadSettings: () => Promise<void>;
 }
+
+const SUPPORTED_LANGUAGES: Language[] = [
+  'zh',
+  'en',
+  'ja',
+  'vi',
+  'ko',
+  'pt',
+  'es',
+  'ru',
+  'nan',
+  'fr',
+  'de',
+];
 
 export const useAppStore = create<AppState>((set, get) => ({
   sourceLang: 'zh',
@@ -63,7 +85,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       AsyncStorage.getItem('sourceLang'),
       AsyncStorage.getItem('targetLang'),
     ]);
-    if (source) set({ sourceLang: source as Language });
-    if (target) set({ targetLang: target as Language });
+
+    if (source && SUPPORTED_LANGUAGES.includes(source as Language)) {
+      set({ sourceLang: source as Language });
+    }
+    if (target && SUPPORTED_LANGUAGES.includes(target as Language)) {
+      set({ targetLang: target as Language });
+    }
   },
 }));

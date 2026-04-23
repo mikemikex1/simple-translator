@@ -25,8 +25,8 @@ export default function RecordButton({ recording, transcribing, onPressIn, onPre
       onPressOut={onPressOut}
       activeOpacity={0.8}
     >
-      <Text style={styles.icon}>{recording ? '⏹' : '🎙'}</Text>
-      <Text style={styles.label}>{recording ? '放開翻譯' : '按住錄音'}</Text>
+      <Text style={styles.icon}>{recording ? '🎙️' : '🎤'}</Text>
+      <Text style={styles.label}>{recording ? '放開即翻譯' : '按住說話'}</Text>
     </TouchableOpacity>
   );
 }

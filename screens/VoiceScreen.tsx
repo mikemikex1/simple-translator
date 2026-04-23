@@ -1,73 +1,208 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import RecordButton from '../components/RecordButton';
 import { useRecording } from '../hooks/useRecording';
 import { useTranslation } from '../hooks/useTranslation';
+import { useAppStore } from '../store/useAppStore';
+import type { Language } from '../store/useAppStore';
 
 interface VoiceResult {
   id: string;
   original: string;
   translated: string;
+  fromLang: Language;
+  toLang: Language;
+  sttMs: number;
+  translationMs: number;
+  ttsMs: number;
+}
+
+interface QueuedVoiceItem {
+  id: string;
+  text: string;
+  fromLang: Language;
+  toLang: Language;
+  sttMs: number;
+  status: 'queued' | 'processing';
 }
 
 interface VoiceScreenProps {
   isActive: boolean;
 }
 
+const MAX_PARALLEL = 2;
+const MIN_RECORD_MS = 2000;
+
 export default function VoiceScreen({ isActive }: VoiceScreenProps) {
+  const { sourceLang, targetLang } = useAppStore();
   const {
     listening,
     transcribing,
     error: recErr,
-    recognizedText,
     startListening,
     stopListening,
     cancelTranscribing,
-    clearRecognizedText,
   } = useRecording();
-  const { translate, loading, error: transErr } = useTranslation();
+  const { translateWithMetrics, speakTextWithTiming, error: transErr } = useTranslation();
+
   const [results, setResults] = useState<VoiceResult[]>([]);
+  const [queue, setQueue] = useState<QueuedVoiceItem[]>([]);
+  const [recordingNotice, setRecordingNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isActive && listening) {
-      stopListening();
+  const sessionLangRef = useRef<{ fromLang: Language; toLang: Language }>({
+    fromLang: sourceLang,
+    toLang: targetLang,
+  });
+  const pressInAtRef = useRef<number | null>(null);
+  const finalizingRef = useRef(false);
+  const pressedRef = useRef(false);
+  const releaseRequestedRef = useRef(false);
+
+  const queuedCount = useMemo(() => queue.filter((x) => x.status === 'queued').length, [queue]);
+  const processingCount = useMemo(
+    () => queue.filter((x) => x.status === 'processing').length,
+    [queue],
+  );
+  const pendingCount = queue.length;
+
+  function resetPressState() {
+    pressedRef.current = false;
+    releaseRequestedRef.current = false;
+    pressInAtRef.current = null;
+    finalizingRef.current = false;
+  }
+
+  function enqueueText(text: string | null, sttMs: number) {
+    const cleaned = text?.trim();
+    if (!cleaned) return;
+    setQueue((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        text: cleaned,
+        fromLang: sessionLangRef.current.fromLang,
+        toLang: sessionLangRef.current.toLang,
+        sttMs,
+        status: 'queued',
+      },
+    ]);
+  }
+
+  function beginRecordSession() {
+    if (finalizingRef.current) return;
+
+    setRecordingNotice(null);
+    sessionLangRef.current = { fromLang: sourceLang, toLang: targetLang };
+    pressInAtRef.current = Date.now();
+    pressedRef.current = true;
+    releaseRequestedRef.current = false;
+
+    startListening().then((started) => {
+      if (!started) {
+        resetPressState();
+      }
+    });
+  }
+
+  async function finalizeCurrentRecording() {
+    if (finalizingRef.current) return;
+    if (!pressedRef.current) return;
+
+    if (!listening) {
+      // Recorder is still starting; mark release and finalize once listening becomes true.
+      releaseRequestedRef.current = true;
+      return;
     }
-  }, [isActive]);
+
+    finalizingRef.current = true;
+    releaseRequestedRef.current = false;
+
+    try {
+      const startedAt = pressInAtRef.current ?? Date.now();
+      const elapsed = Date.now() - startedAt;
+
+      if (elapsed < MIN_RECORD_MS) {
+        setRecordingNotice(`錄音太短，已自動補足 ${MIN_RECORD_MS / 1000} 秒`);
+        await new Promise((resolve) => setTimeout(resolve, MIN_RECORD_MS - elapsed));
+      } else {
+        setRecordingNotice(null);
+      }
+
+      const sttMs = Date.now() - startedAt;
+      const text = await stopListening();
+      enqueueText(text, sttMs);
+    } finally {
+      resetPressState();
+    }
+  }
 
   useEffect(() => {
-    if (!recognizedText) return;
+    // Fast tap case: onPressOut happened before recognizer entered "listening".
+    if (listening && pressedRef.current && releaseRequestedRef.current && !finalizingRef.current) {
+      void finalizeCurrentRecording();
+    }
+  }, [listening]);
+
+  useEffect(() => {
+    if (!isActive && pressedRef.current) {
+      void finalizeCurrentRecording();
+    }
+  }, [isActive, listening]);
+
+  useEffect(() => {
+    if (processingCount >= MAX_PARALLEL) return;
+    const next = queue.find((item) => item.status === 'queued');
+    if (!next) return;
+
+    setQueue((prev) =>
+      prev.map((item) => (item.id === next.id ? { ...item, status: 'processing' } : item)),
+    );
 
     let active = true;
     (async () => {
-      const translated = await translate(recognizedText);
+      const { translated, translationMs } = await translateWithMetrics(next.text, {
+        fromLang: next.fromLang,
+        toLang: next.toLang,
+        speak: false,
+      });
       if (!active) return;
+
+      // Translation finished -> remove one item immediately.
+      setQueue((prev) => prev.filter((item) => item.id !== next.id));
+
       if (translated) {
-        setResults((prev: VoiceResult[]) => [
-          { id: Date.now().toString(), original: recognizedText, translated },
+        setResults((prev) => [
+          {
+            id: next.id,
+            original: next.text,
+            translated,
+            fromLang: next.fromLang,
+            toLang: next.toLang,
+            sttMs: next.sttMs,
+            translationMs,
+            ttsMs: 0,
+          },
           ...prev,
         ]);
+
+        void speakTextWithTiming(translated, next.toLang).then((ttsMs) => {
+          setResults((prev) =>
+            prev.map((r) => (r.id === next.id ? { ...r, ttsMs } : r)),
+          );
+        });
       }
-      clearRecognizedText();
     })();
 
     return () => {
       active = false;
     };
-  }, [recognizedText]);
+  }, [queue, processingCount, translateWithMetrics, speakTextWithTiming]);
 
-  async function handlePressOut() {
-    const text = await stopListening();
-    if (!text) return;
-    const translated = await translate(text);
-    if (translated) {
-      setResults((prev: VoiceResult[]) => [
-        { id: Date.now().toString(), original: text, translated },
-        ...prev,
-      ]);
-    }
+  function clearQueue() {
+    setQueue([]);
   }
 
-  const busy = transcribing || loading;
+  const busy = transcribing || pendingCount > 0;
   const error = recErr || transErr;
 
   return (
@@ -75,25 +210,52 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
       <View style={styles.btnArea}>
         <RecordButton
           recording={listening}
-          transcribing={busy}
-          onPressIn={startListening}
-          onPressOut={handlePressOut}
+          transcribing={transcribing}
+          onPressIn={beginRecordSession}
+          onPressOut={finalizeCurrentRecording}
         />
+
         <Text style={styles.hint}>
-          {listening ? '聆聽中...' : busy ? '轉錄中...' : '按住錄音，放開後自動轉錄翻譯'}
+          {listening
+            ? '收音中，放開後會停止收音並送翻譯'
+            : busy
+              ? `背景處理中：進行 ${processingCount} / 排隊 ${queuedCount} / 待處理 ${pendingCount}`
+              : '按住錄音，放開、移開或切頁都會停止並送翻譯'}
         </Text>
-        {transcribing && (
-          <TouchableOpacity style={styles.stopBtn} onPress={cancelTranscribing}>
-            <Text style={styles.stopBtnText}>停止轉錄</Text>
+
+        {(listening || transcribing) && (
+          <TouchableOpacity
+            style={styles.stopBtn}
+            onPress={() => {
+              cancelTranscribing();
+              resetPressState();
+            }}
+          >
+            <Text style={styles.stopBtnText}>立即停止</Text>
           </TouchableOpacity>
         )}
+
+        {pendingCount > 0 && (
+          <TouchableOpacity style={styles.clearQueueBtn} onPress={clearQueue}>
+            <Text style={styles.clearQueueBtnText}>清除佇列（{pendingCount}）</Text>
+          </TouchableOpacity>
+        )}
+
         {error && <Text style={styles.error}>{error}</Text>}
+        {recordingNotice && <Text style={styles.notice}>{recordingNotice}</Text>}
       </View>
+
       <ScrollView style={styles.results} contentContainerStyle={styles.resultContent}>
         {results.map((r) => (
           <View key={r.id} style={styles.card}>
+            <Text style={styles.langTag}>
+              {r.fromLang} {'->'} {r.toLang}
+            </Text>
             <Text style={styles.original}>{r.original}</Text>
             <Text style={styles.translated}>{r.translated}</Text>
+            <Text style={styles.timing}>
+              STT {r.sttMs}ms | 翻譯 {r.translationMs}ms | TTS {r.ttsMs}ms
+            </Text>
           </View>
         ))}
       </ScrollView>
@@ -105,25 +267,29 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   btnArea: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 24,
     backgroundColor: '#fff',
-    gap: 16,
+    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  hint: { color: '#888', fontSize: 13 },
+  hint: { color: '#666', fontSize: 13 },
   stopBtn: {
     backgroundColor: '#e53935',
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  stopBtnText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
+  stopBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  clearQueueBtn: {
+    backgroundColor: '#666',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
+  clearQueueBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   error: { color: '#e53935', fontSize: 13 },
+  notice: { color: '#8a6a00', fontSize: 12 },
   results: { flex: 1 },
   resultContent: { padding: 16, gap: 12 },
   card: {
@@ -137,6 +303,8 @@ const styles = StyleSheet.create({
     elevation: 2,
     gap: 6,
   },
+  langTag: { fontSize: 12, color: '#7b8594' },
   original: { fontSize: 15, color: '#555' },
   translated: { fontSize: 17, color: '#3366ff', fontWeight: '600' },
+  timing: { fontSize: 12, color: '#8a8a8a' },
 });

@@ -4,6 +4,14 @@ const WHISPER_LANG: Record<Language, string> = {
   zh: 'zh',
   en: 'en',
   ja: 'ja',
+  vi: 'vi',
+  ko: 'ko',
+  pt: 'pt',
+  es: 'es',
+  ru: 'ru',
+  nan: 'zh',
+  fr: 'fr',
+  de: 'de',
 };
 
 export async function transcribeAudio(

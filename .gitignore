@@ -41,3 +41,5 @@ expo-*.log
 # generated native folders
 /ios
 /android
+
+.gradle-local/
