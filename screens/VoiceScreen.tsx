@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+﻿import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import RecordButton from '../components/RecordButton';
 import { useRecording } from '../hooks/useRecording';
 import { useTranslation } from '../hooks/useTranslation';
@@ -15,7 +15,16 @@ interface VoiceScreenProps {
 }
 
 export default function VoiceScreen({ isActive }: VoiceScreenProps) {
-  const { listening, transcribing, error: recErr, startListening, stopListening } = useRecording();
+  const {
+    listening,
+    transcribing,
+    error: recErr,
+    recognizedText,
+    startListening,
+    stopListening,
+    cancelTranscribing,
+    clearRecognizedText,
+  } = useRecording();
   const { translate, loading, error: transErr } = useTranslation();
   const [results, setResults] = useState<VoiceResult[]>([]);
 
@@ -24,6 +33,27 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
       stopListening();
     }
   }, [isActive]);
+
+  useEffect(() => {
+    if (!recognizedText) return;
+
+    let active = true;
+    (async () => {
+      const translated = await translate(recognizedText);
+      if (!active) return;
+      if (translated) {
+        setResults((prev: VoiceResult[]) => [
+          { id: Date.now().toString(), original: recognizedText, translated },
+          ...prev,
+        ]);
+      }
+      clearRecognizedText();
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [recognizedText]);
 
   async function handlePressOut() {
     const text = await stopListening();
@@ -50,8 +80,13 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
           onPressOut={handlePressOut}
         />
         <Text style={styles.hint}>
-          {listening ? '聆聽中...' : busy ? '處理中...' : '按住錄音，放開自動翻譯'}
+          {listening ? '聆聽中...' : busy ? '轉錄中...' : '按住錄音，放開後自動轉錄翻譯'}
         </Text>
+        {transcribing && (
+          <TouchableOpacity style={styles.stopBtn} onPress={cancelTranscribing}>
+            <Text style={styles.stopBtnText}>停止轉錄</Text>
+          </TouchableOpacity>
+        )}
         {error && <Text style={styles.error}>{error}</Text>}
       </View>
       <ScrollView style={styles.results} contentContainerStyle={styles.resultContent}>
@@ -77,6 +112,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   hint: { color: '#888', fontSize: 13 },
+  stopBtn: {
+    backgroundColor: '#e53935',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  stopBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   error: { color: '#e53935', fontSize: 13 },
   results: { flex: 1 },
   resultContent: { padding: 16, gap: 12 },

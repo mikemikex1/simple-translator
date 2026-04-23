@@ -16,23 +16,35 @@ export function useRecording() {
   const [listening, setListening] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recognizedText, setRecognizedText] = useState<string | null>(null);
   const { sourceLang } = useAppStore();
   const resolveRef = useRef<((text: string | null) => void) | null>(null);
   const partialRef = useRef<string>('');
+  const cancelledRef = useRef(false);
+
+  function resolvePending(text: string | null) {
+    if (!resolveRef.current) return;
+    resolveRef.current(text);
+    resolveRef.current = null;
+  }
 
   useSpeechRecognitionEvent('result', (event) => {
     const best = event.results?.[0]?.transcript ?? '';
     partialRef.current = best;
     if (event.isFinal && resolveRef.current) {
-      resolveRef.current(best || null);
-      resolveRef.current = null;
+      resolvePending(best || null);
     }
   });
 
   useSpeechRecognitionEvent('error', (event) => {
     setError(event.message ?? 'Speech recognition error');
-    resolveRef.current?.(partialRef.current || null);
-    resolveRef.current = null;
+    const finalText = cancelledRef.current ? null : partialRef.current || null;
+    if (resolveRef.current) {
+      resolvePending(finalText);
+    } else if (finalText) {
+      setRecognizedText(finalText);
+    }
+    cancelledRef.current = false;
     setListening(false);
     setTranscribing(false);
   });
@@ -40,16 +52,20 @@ export function useRecording() {
   useSpeechRecognitionEvent('end', () => {
     setListening(false);
     // Resolve with whatever partial text was captured if not yet resolved
+    const finalText = cancelledRef.current ? null : partialRef.current || null;
     if (resolveRef.current) {
-      resolveRef.current(partialRef.current || null);
-      resolveRef.current = null;
+      resolvePending(finalText);
+    } else if (finalText) {
+      setRecognizedText(finalText);
     }
+    cancelledRef.current = false;
     setTranscribing(false);
   });
 
   async function startListening() {
     setError(null);
     partialRef.current = '';
+    setRecognizedText(null);
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
       setError('需要麥克風權限');
@@ -58,12 +74,14 @@ export function useRecording() {
     ExpoSpeechRecognitionModule.start({
       lang: LANG_CODE[sourceLang],
       interimResults: true,
-      continuous: false,
+      continuous: true,
     });
     setListening(true);
   }
 
   async function stopListening(): Promise<string | null> {
+    if (!listening) return null;
+    cancelledRef.current = false;
     setTranscribing(true);
     return new Promise((resolve) => {
       resolveRef.current = resolve;
@@ -71,5 +89,30 @@ export function useRecording() {
     });
   }
 
-  return { listening, transcribing, error, startListening, stopListening };
+  function cancelTranscribing() {
+    cancelledRef.current = true;
+    setTranscribing(false);
+    resolvePending(null);
+    setRecognizedText(null);
+    try {
+      (ExpoSpeechRecognitionModule as any).abort?.();
+    } catch {
+      ExpoSpeechRecognitionModule.stop();
+    }
+  }
+
+  function clearRecognizedText() {
+    setRecognizedText(null);
+  }
+
+  return {
+    listening,
+    transcribing,
+    error,
+    recognizedText,
+    startListening,
+    stopListening,
+    cancelTranscribing,
+    clearRecognizedText,
+  };
 }

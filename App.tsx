@@ -10,14 +10,12 @@ import {
 import LanguageSwitcher from './components/LanguageSwitcher';
 import TextScreen from './screens/TextScreen';
 import VoiceScreen from './screens/VoiceScreen';
-import CameraScreen from './screens/CameraScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import { useAppStore } from './store/useAppStore';
 
 const TABS = [
   { key: 'text', label: '文字' },
   { key: 'voice', label: '語音' },
-  { key: 'camera', label: '相片' },
   { key: 'settings', label: '設定' },
 ] as const;
 
@@ -61,7 +59,6 @@ function AppContent() {
       >
         <View key="text"><TextScreen /></View>
         <View key="voice"><VoiceScreen isActive={currentKey === 'voice'} /></View>
-        <View key="camera"><CameraScreen /></View>
         <View key="settings"><SettingsScreen /></View>
       </PagerView>
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
