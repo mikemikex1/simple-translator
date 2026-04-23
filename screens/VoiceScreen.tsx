@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import RecordButton from '../components/RecordButton';
 import { useRecording } from '../hooks/useRecording';
@@ -30,8 +30,7 @@ interface VoiceScreenProps {
   isActive: boolean;
 }
 
-const MAX_PARALLEL = 2;
-const MIN_RECORD_MS = 2000;
+const MIN_RECORD_MS = 3000;
 
 export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   const { sourceLang, targetLang } = useAppStore();
@@ -57,6 +56,8 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   const finalizingRef = useRef(false);
   const pressedRef = useRef(false);
   const releaseRequestedRef = useRef(false);
+  const processingIdRef = useRef<string | null>(null);
+  const ttsChainRef = useRef<Promise<void>>(Promise.resolve());
 
   const queuedCount = useMemo(() => queue.filter((x) => x.status === 'queued').length, [queue]);
   const processingCount = useMemo(
@@ -75,6 +76,7 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   function enqueueText(text: string | null, sttMs: number) {
     const cleaned = text?.trim();
     if (!cleaned) return;
+
     setQueue((prev) => [
       ...prev,
       {
@@ -109,7 +111,6 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
     if (!pressedRef.current) return;
 
     if (!listening) {
-      // Recorder is still starting; mark release and finalize once listening becomes true.
       releaseRequestedRef.current = true;
       return;
     }
@@ -137,7 +138,6 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   }
 
   useEffect(() => {
-    // Fast tap case: onPressOut happened before recognizer entered "listening".
     if (listening && pressedRef.current && releaseRequestedRef.current && !finalizingRef.current) {
       void finalizeCurrentRecording();
     }
@@ -150,10 +150,12 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   }, [isActive, listening]);
 
   useEffect(() => {
-    if (processingCount >= MAX_PARALLEL) return;
+    if (processingIdRef.current) return;
+
     const next = queue.find((item) => item.status === 'queued');
     if (!next) return;
 
+    processingIdRef.current = next.id;
     setQueue((prev) =>
       prev.map((item) => (item.id === next.id ? { ...item, status: 'processing' } : item)),
     );
@@ -167,7 +169,7 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
       });
       if (!active) return;
 
-      // Translation finished -> remove one item immediately.
+      // 每完成一筆翻譯就立刻從佇列移除（佇列 -1）
       setQueue((prev) => prev.filter((item) => item.id !== next.id));
 
       if (translated) {
@@ -185,18 +187,23 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
           ...prev,
         ]);
 
-        void speakTextWithTiming(translated, next.toLang).then((ttsMs) => {
-          setResults((prev) =>
-            prev.map((r) => (r.id === next.id ? { ...r, ttsMs } : r)),
-          );
+        // TTS 串行，避免後一句直接中斷前一句
+        ttsChainRef.current = ttsChainRef.current.then(async () => {
+          const ttsMs = await speakTextWithTiming(translated, next.toLang);
+          if (!active) return;
+          setResults((prev) => prev.map((r) => (r.id === next.id ? { ...r, ttsMs } : r)));
         });
       }
-    })();
+    })().finally(() => {
+      if (processingIdRef.current === next.id) {
+        processingIdRef.current = null;
+      }
+    });
 
     return () => {
       active = false;
     };
-  }, [queue, processingCount, translateWithMetrics, speakTextWithTiming]);
+  }, [queue, translateWithMetrics, speakTextWithTiming]);
 
   function clearQueue() {
     setQueue([]);
@@ -217,10 +224,10 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
 
         <Text style={styles.hint}>
           {listening
-            ? '收音中，放開後會停止收音並送翻譯'
+            ? '錄音中，放開即可送出翻譯'
             : busy
-              ? `背景處理中：進行 ${processingCount} / 排隊 ${queuedCount} / 待處理 ${pendingCount}`
-              : '按住錄音，放開、移開或切頁都會停止並送翻譯'}
+              ? `處理中：執行 ${processingCount} / 等待 ${queuedCount} / 總佇列 ${pendingCount}`
+              : '按住錄音，放開後會自動翻譯並語音回覆'}
         </Text>
 
         {(listening || transcribing) && (
@@ -231,7 +238,7 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
               resetPressState();
             }}
           >
-            <Text style={styles.stopBtnText}>立即停止</Text>
+            <Text style={styles.stopBtnText}>停止轉錄</Text>
           </TouchableOpacity>
         )}
 
