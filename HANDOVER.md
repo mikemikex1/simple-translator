@@ -1,6 +1,6 @@
 ﻿# HANDOVER - SimpleTranslator
 
-更新日期：2026-04-24
+更新日期：2026-04-25
 
 ## 一、專案定位
 
@@ -21,6 +21,7 @@
 2. 語音翻譯
 - 交互方式：按住錄音，放開送出
 - 最短錄音保護：少於 2 秒會自動補足時間再停止
+- 放開後會額外等待 1 秒再停辨識，減少尾音被截斷
 - 錄音停止後才送翻譯，不再持續收音
 - 佇列機制：可在背景翻譯時繼續錄下一句
 - 併發上限：2 條翻譯流程並行
@@ -46,6 +47,10 @@
 4. queue worker 呼叫 `useTranslation.translateWithMetrics()`
 5. 翻譯完成後即時自 queue 減 1
 6. 背景執行 TTS 播放並回填 ttsMs
+
+重要修正：
+- `VoiceScreen` 的 queue worker 不能在 effect cleanup 裡用區域 `active` flag 擋住整個流程，否則會讓 `setQueue` 後的重 render 中斷翻譯、TTS 與 queue 更新
+- `useTranslation.speakWithTiming()` 會先 `Speech.stop()` 再播，避免殘留播放狀態影響下一句
 
 ## 四、支援語言
 
@@ -101,6 +106,11 @@ npx tsc --noEmit
 npm run build:release:apk
 ```
 
+這版 release 相關設定：
+- `newArchEnabled=false`
+- `app.json` splash icon 指向新版 `assets/icon.png`
+- Android native `splashscreen_logo.png` 已同步替換
+
 只修鎖檔（`.git` / `.gradle`）：
 ```bash
 npm run fix:locks
@@ -139,7 +149,6 @@ gradlew.bat bundleRelease
 
 ## 九、已知問題與建議
 
-- 部分中文 UI 字串有編碼亂碼，建議後續統一 UTF-8 清理。
 - STT 品質與速度依賴手機語音服務與網路。
 - queue 為記憶體型，關閉 App 後未處理佇列不保留。
 

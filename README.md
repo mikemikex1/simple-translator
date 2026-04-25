@@ -31,7 +31,8 @@ SimpleTranslator 是一個 React Native（Expo）行動翻譯 App，主打「文
 - 顯示翻譯歷史訊息
 
 2. 語音頁（Voice）
-- 按住錄音、放開後送入佇列
+- 按住錄音、放開後會多保留 1 秒再停止辨識，降低截斷尾音的機率
+- 放開後送入佇列
 - 佇列最多並行 2 條翻譯流程
 - 顯示每句耗時：`STT / 翻譯 / TTS`
 - 提供「停止轉錄」與「清除佇列」
@@ -142,6 +143,7 @@ npm run build:release:apk
 - 自動修復 `.git` 與 Gradle 常見鎖檔問題
 - 預設使用 `%TEMP%\SimpleTranslator\gradle-cache`，並自動 fallback 其他快取路徑
 - 自動輸出 release APK
+- 已關閉 React Native 新架構，避免 Windows release 時 CMake `.cxx` 被鎖住
 
 ### 只修復鎖檔
 
@@ -183,10 +185,10 @@ gradlew.bat bundleRelease
 ## 注意事項
 
 - `android/gradle.properties` 的 `reactNativeArchitectures=arm64-v8a` 請保留。
+- `newArchEnabled` 目前關閉，這版 release 依賴舊架構穩定出包。
 - 若手機安裝新 APK 但圖示未更新：先解除安裝舊版，再重裝新版。
 - 若要上 Google Play，請改成正式簽章 keystore（目前 release 使用 debug signing）。
 
 ## 目前已知議題
 
-- 某些中文 UI 字串有編碼亂碼，功能可用但建議後續清理。
 - STT 速度與準確度會受手機語音服務與網路品質影響。

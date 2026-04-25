@@ -31,6 +31,7 @@ interface VoiceScreenProps {
 }
 
 const MIN_RECORD_MS = 3000;
+const RELEASE_CAPTURE_PADDING_MS = 1000;
 
 export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   const { sourceLang, targetLang } = useAppStore();
@@ -58,6 +59,13 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   const releaseRequestedRef = useRef(false);
   const processingIdRef = useRef<string | null>(null);
   const ttsChainRef = useRef<Promise<void>>(Promise.resolve());
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const queuedCount = useMemo(() => queue.filter((x) => x.status === 'queued').length, [queue]);
   const processingCount = useMemo(
@@ -129,6 +137,8 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
         setRecordingNotice(null);
       }
 
+      await new Promise((resolve) => setTimeout(resolve, RELEASE_CAPTURE_PADDING_MS));
+
       const sttMs = Date.now() - startedAt;
       const text = await stopListening();
       enqueueText(text, sttMs);
@@ -160,14 +170,13 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
       prev.map((item) => (item.id === next.id ? { ...item, status: 'processing' } : item)),
     );
 
-    let active = true;
     (async () => {
       const { translated, translationMs } = await translateWithMetrics(next.text, {
         fromLang: next.fromLang,
         toLang: next.toLang,
         speak: false,
       });
-      if (!active) return;
+      if (!mountedRef.current) return;
 
       // 每完成一筆翻譯就立刻從佇列移除（佇列 -1）
       setQueue((prev) => prev.filter((item) => item.id !== next.id));
@@ -190,7 +199,7 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
         // TTS 串行，避免後一句直接中斷前一句
         ttsChainRef.current = ttsChainRef.current.then(async () => {
           const ttsMs = await speakTextWithTiming(translated, next.toLang);
-          if (!active) return;
+          if (!mountedRef.current) return;
           setResults((prev) => prev.map((r) => (r.id === next.id ? { ...r, ttsMs } : r)));
         });
       }
@@ -199,10 +208,6 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
         processingIdRef.current = null;
       }
     });
-
-    return () => {
-      active = false;
-    };
   }, [queue, translateWithMetrics, speakTextWithTiming]);
 
   function clearQueue() {

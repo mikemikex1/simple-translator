@@ -46,13 +46,22 @@ export function useTranslation() {
         resolveOnce();
       }, SPEAK_TIMEOUT_MS);
 
-      Speech.speak(text, {
-        language: TTS_LANG[lang],
-        rate: 1.0,
-        onDone: resolveOnce,
-        onStopped: resolveOnce,
-        onError: resolveOnce,
-      });
+      try {
+        Speech.stop();
+        Speech.speak(text, {
+          language: TTS_LANG[lang],
+          rate: 1.0,
+          onDone: resolveOnce,
+          onStopped: resolveOnce,
+          onError: () => {
+            setError('語音播放失敗，請確認裝置 TTS 語音引擎與音量設定。');
+            resolveOnce();
+          },
+        });
+      } catch (e: any) {
+        setError(e?.message ?? '語音播放啟動失敗');
+        resolveOnce();
+      }
     });
   }
 
