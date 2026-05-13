@@ -1,68 +1,63 @@
-﻿# SimpleTranslator
+# SimpleTranslator
 
-SimpleTranslator 是一個 React Native（Expo）行動翻譯 App，主打「文字翻譯 + 按住說話即時翻譯」。
+SimpleTranslator 是一個 React Native（Expo）行動翻譯 App，主打文字翻譯、按住說話翻譯、語音播放與 Google Mobile Ads 橫幅廣告。
 
-## 功能狀態
+本版本沒有使用 AI / LLM 服務；翻譯來源為 MyMemory API，語音辨識與語音播放使用裝置可用的原生語音服務。
+
+## 版本狀態
+
+- App 版本：`1.0.3`
+- Android versionCode：`2`
+- 測試狀態：Android 實機 Development Build 已成功測試
+- 上架目標：Google Play 封閉測試 AAB
+
+## 目前功能
 
 | 模組 | 狀態 | 說明 |
 |---|---|---|
-| 文字翻譯 | 已完成 | 輸入文字後即時翻譯，訊息會寫入歷史清單 |
-| 語音翻譯 | 已完成 | 按住錄音、放開送出，支援背景佇列翻譯 |
-| 語音播放（TTS） | 已完成 | 翻譯完成後自動語音播放 |
-| 語言切換 | 已完成 | 來源/目標語言下拉選單 + 一鍵交換 |
-| 設定頁 | 已完成 | 顯示服務架構與說明 |
-| 相機/相片 OCR | 已移除 | 本版本不保留相機與圖庫翻譯功能 |
-| Flutter 程式碼 | 已移除 | 專案僅保留 React Native |
+| 文字翻譯 | 已完成 | 輸入文字後呼叫 MyMemory API 翻譯，結果寫入歷史清單 |
+| 語音翻譯 | 已完成 | 按住錄音、放開送出，辨識文字後翻譯 |
+| 背景佇列 | 已完成 | 語音結果可排入佇列，背景逐筆翻譯與播放 |
+| 語音播放（TTS） | 已完成 | 翻譯完成後使用裝置 TTS 自動播放 |
+| 語言切換 | 已完成 | 來源/目標語言選單、搜尋、一鍵交換、中英文語言名稱切換 |
+| 翻譯歷史 | 已完成 | 文字翻譯結果顯示於訊息列表，可清除 |
+| 設定頁 | 已完成 | 顯示 STT / 翻譯 / TTS / Ads 服務來源 |
+| Google Mobile Ads | 已完成 | 使用 `react-native-google-mobile-ads` 測試廣告單元 |
+| 相機/相簿 OCR | 已移除 | 本版本不保留相機與圖庫翻譯功能 |
 
 ## 技術與服務
 
 - Framework: `React Native 0.81` + `Expo SDK 54`
 - Language: `TypeScript`
 - State: `Zustand` + `AsyncStorage`
-- 語音辨識（STT）: `expo-speech-recognition`（使用裝置可用的 Google Speech 服務）
-- 翻譯: `MyMemory API`（免費方案）
-- 語音播放（TTS）: `expo-speech`
+- STT: `expo-speech-recognition`
+- Translation: `MyMemory API`
+- TTS: `expo-speech`
+- Ads: `react-native-google-mobile-ads`
 - UI: `react-native-pager-view` + 自訂元件
 
-## App 大綱（頁面）
+## 重要限制
 
-1. 文字頁（Text）
-- 輸入文字並翻譯
-- 顯示翻譯歷史訊息
-
-2. 語音頁（Voice）
-- 按住錄音、放開後會多保留 1 秒再停止辨識，降低截斷尾音的機率
-- 放開後送入佇列
-- 佇列最多並行 2 條翻譯流程
-- 顯示每句耗時：`STT / 翻譯 / TTS`
-- 提供「停止轉錄」與「清除佇列」
-
-3. 設定頁（Settings）
-- 顯示目前服務來源（STT / 翻譯 / TTS）
-- 無 API Key 輸入 UI
+- Expo Go 不包含 `expo-speech-recognition` 與 `react-native-google-mobile-ads` 原生模組。
+- 要測試語音辨識與廣告，必須使用 Development Build、APK 或 AAB 安裝包。
+- Google Play 上架需使用正式簽章的 AAB；不要使用 debug signing 作為正式上架包。
 
 ## 支援語言
 
-- `zh` 中文
-- `en` English
-- `ja` 日本語
-- `vi` Tiếng Việt
-- `ko` 한국어
-- `pt` Português
-- `es` Español
-- `ru` Русский
-- `nan` 台語
-- `fr` Français
-- `de` Deutsch
+目前支援 48 種語言代碼：
+
+`af`, `ar`, `bg`, `bn`, `ca`, `cs`, `da`, `de`, `el`, `en`, `es`, `et`, `fa`, `fi`, `fil`, `fr`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `ko`, `lt`, `lv`, `ms`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sr`, `sv`, `sw`, `ta`, `te`, `th`, `tr`, `uk`, `ur`, `vi`, `zh`, `nan`
+
+`nan` 目前映射為 `zh-TW`，用於台語/台灣語境的近似處理。
 
 ## 專案結構
 
 ```text
 App.tsx
 components/
+  ChatBubble.tsx
   LanguageSwitcher.tsx
   RecordButton.tsx
-  ChatBubble.tsx
 hooks/
   useRecording.ts
   useTranslation.ts
@@ -72,39 +67,23 @@ screens/
   SettingsScreen.tsx
 services/
   translateService.ts
-  speechService.ts
 store/
   useAppStore.ts
 android/
 assets/
 ```
 
-## 啟動專案（開發）
-
-### 1) 安裝
+## 開發指令
 
 ```bash
 npm install
-```
-
-### 2) 啟動 Expo（LAN）
-
-```bash
 npm run start:clear
 ```
 
-可用模式：
+Expo Go 只適合測文字翻譯等 JS 功能。原生功能請使用：
 
 ```bash
-npm run start
-npm run start:localhost
-npm run start:tunnel
-```
-
-### 3) 直接跑 Android Native
-
-```bash
-npm run android
+npx expo run:android --device
 ```
 
 ## 測試指令
@@ -115,80 +94,57 @@ npx tsc --noEmit
 
 建議手動 Smoke Test：
 
-1. 文字翻譯：輸入一句文字，確認結果與歷史訊息。
-2. 語音翻譯：按住說話後放開，確認入佇列與翻譯結果。
-3. 連續語音：快速連續錄兩句，確認背景佇列可持續處理。
-4. 停止轉錄：錄音中切頁或放開，確認不再持續收音。
-5. 清除佇列：翻譯過程中按清除，確認待處理工作被移除。
+1. 文字翻譯：輸入一句文字，確認翻譯結果與歷史訊息。
+2. 語言切換：切換來源/目標語言，確認翻譯方向正確。
+3. 語音翻譯：按住錄音後放開，確認 STT、翻譯、TTS 都完成。
+4. 連續語音：連續錄兩句，確認佇列可逐筆處理。
+5. 廣告：確認非語音頁底部顯示 Google 測試廣告。
 
-## MyMemory 免費額度設定（建議）
+## 環境變數
 
-在 `.env` 設定：
+MyMemory polite pool 可設定：
 
 ```bash
 EXPO_PUBLIC_MYMEMORY_EMAIL=you@example.com
 ```
 
-系統會自動附加 `de=<email>`，可使用 MyMemory polite pool 額度（以官方規則為準）。
-
-## 打包 Release
-
-### 一鍵修鎖並打包 APK（建議）
+Google Ads 正式廣告單元可設定：
 
 ```bash
-npm run build:release:apk
+EXPO_PUBLIC_ADMOB_BANNER_ID=ca-app-pub-xxxxxxxxxxxxxxxx/yyyyyyyyyy
 ```
 
-說明：
-- 自動修復 `.git` 與 Gradle 常見鎖檔問題
-- 預設使用 `%TEMP%\SimpleTranslator\gradle-cache`，並自動 fallback 其他快取路徑
-- 自動輸出 release APK
-- 已關閉 React Native 新架構，避免 Windows release 時 CMake `.cxx` 被鎖住
+未設定時會使用 Google 官方測試 Banner ID。
 
-### 只修復鎖檔
+## Android 打包
 
-```bash
-npm run fix:locks
-```
-
-### 一次性修復 `.git` ACL（需系統管理員）
-
-```bash
-npm run fix:git:acl:admin
-```
-
-適用情況：
-- `fatal: Unable to create .git/index.lock: Permission denied`
-
-### Release APK
-
-```bash
-cd android
-gradlew.bat assembleRelease
-```
-
-輸出檔案：
-
-- `android/app/build/outputs/apk/release/app-release.apk`
-
-### 上架 Google Play（建議 AAB）
+本機 AAB：
 
 ```bash
 cd android
 gradlew.bat bundleRelease
 ```
 
-輸出檔案：
+輸出：
 
-- `android/app/build/outputs/bundle/release/app-release.aab`
+```text
+android/app/build/outputs/bundle/release/app-release.aab
+```
 
-## 注意事項
+EAS Production AAB：
 
-- `android/gradle.properties` 的 `reactNativeArchitectures=arm64-v8a` 請保留。
-- `newArchEnabled` 目前關閉，這版 release 依賴舊架構穩定出包。
-- 若手機安裝新 APK 但圖示未更新：先解除安裝舊版，再重裝新版。
-- 若要上 Google Play，請改成正式簽章 keystore（目前 release 使用 debug signing）。
+```bash
+npm run eas:build:android
+```
 
-## 目前已知議題
+Submit 到 Google Play internal draft：
 
-- STT 速度與準確度會受手機語音服務與網路品質影響。
+```bash
+npm run eas:submit:android:closed
+```
+
+## 已知議題
+
+- STT 品質與速度依賴手機語音服務、語言包與網路品質。
+- MyMemory 免費方案有流量限制，正式產品應評估付費翻譯服務或備援。
+- 目前 release signing 需確認使用正式 keystore 後再上傳 Play Console。

@@ -8,17 +8,14 @@ const FAST_MODE = false;
 const SPEAK_TIMEOUT_MS = 15000;
 
 const TTS_LANG: Record<Language, string> = {
-  zh: 'zh-TW',
-  en: 'en-US',
-  ja: 'ja-JP',
-  vi: 'vi-VN',
-  ko: 'ko-KR',
-  pt: 'pt-PT',
-  es: 'es-ES',
-  ru: 'ru-RU',
-  nan: 'zh-TW',
-  fr: 'fr-FR',
-  de: 'de-DE',
+  af: 'af-ZA', ar: 'ar-SA', bg: 'bg-BG', bn: 'bn-BD', ca: 'ca-ES', cs: 'cs-CZ',
+  da: 'da-DK', de: 'de-DE', el: 'el-GR', en: 'en-US', es: 'es-ES', et: 'et-EE',
+  fa: 'fa-IR', fi: 'fi-FI', fil: 'fil-PH', fr: 'fr-FR', he: 'he-IL', hi: 'hi-IN',
+  hr: 'hr-HR', hu: 'hu-HU', id: 'id-ID', it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR',
+  lt: 'lt-LT', lv: 'lv-LV', ms: 'ms-MY', nl: 'nl-NL', no: 'no-NO', pl: 'pl-PL',
+  pt: 'pt-PT', ro: 'ro-RO', ru: 'ru-RU', sk: 'sk-SK', sl: 'sl-SI', sr: 'sr-RS',
+  sv: 'sv-SE', sw: 'sw-KE', ta: 'ta-IN', te: 'te-IN', th: 'th-TH', tr: 'tr-TR',
+  uk: 'uk-UA', ur: 'ur-PK', vi: 'vi-VN', zh: 'zh-TW', nan: 'zh-TW',
 };
 
 export function useTranslation() {
@@ -54,12 +51,12 @@ export function useTranslation() {
           onDone: resolveOnce,
           onStopped: resolveOnce,
           onError: () => {
-            setError('語音播放失敗，請確認裝置 TTS 語音引擎與音量設定。');
+            setError('語音播放失敗，請確認裝置 TTS 設定。');
             resolveOnce();
           },
         });
       } catch (e: any) {
-        setError(e?.message ?? '語音播放啟動失敗');
+        setError(e?.message ?? '語音播放失敗');
         resolveOnce();
       }
     });
@@ -101,7 +98,7 @@ export function useTranslation() {
 
       return { translated: result, translationMs, ttsMs };
     } catch (e: any) {
-      setError(e.message ?? 'Translation failed');
+      setError(e.message ?? '翻譯失敗');
       return { translated: null, translationMs: 0, ttsMs: 0 };
     } finally {
       setLoading(false);

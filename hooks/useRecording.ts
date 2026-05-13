@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
@@ -7,6 +7,42 @@ import { useAppStore } from '../store/useAppStore';
 import type { Language } from '../store/useAppStore';
 
 const LANG_CODE: Record<Language, string> = {
+  af: 'af-ZA',
+  ar: 'ar-SA',
+  bg: 'bg-BG',
+  bn: 'bn-BD',
+  ca: 'ca-ES',
+  cs: 'cs-CZ',
+  da: 'da-DK',
+  el: 'el-GR',
+  et: 'et-EE',
+  fa: 'fa-IR',
+  fi: 'fi-FI',
+  fil: 'fil-PH',
+  he: 'he-IL',
+  hi: 'hi-IN',
+  hr: 'hr-HR',
+  hu: 'hu-HU',
+  id: 'id-ID',
+  it: 'it-IT',
+  lt: 'lt-LT',
+  lv: 'lv-LV',
+  ms: 'ms-MY',
+  nl: 'nl-NL',
+  no: 'no-NO',
+  pl: 'pl-PL',
+  ro: 'ro-RO',
+  sk: 'sk-SK',
+  sl: 'sl-SI',
+  sr: 'sr-RS',
+  sv: 'sv-SE',
+  sw: 'sw-KE',
+  ta: 'ta-IN',
+  te: 'te-IN',
+  th: 'th-TH',
+  tr: 'tr-TR',
+  uk: 'uk-UA',
+  ur: 'ur-PK',
   zh: 'zh-TW',
   en: 'en-US',
   ja: 'ja-JP',
@@ -37,6 +73,16 @@ export function useRecording() {
   const supportedLocalesRef = useRef<string[] | null>(null);
   const installedLocalesRef = useRef<string[] | null>(null);
   const STOP_RESULT_TIMEOUT_MS = 1200;
+
+  function ensureSpeechModuleAvailable(): boolean {
+    try {
+      ExpoSpeechRecognitionModule.supportsOnDeviceRecognition();
+      return true;
+    } catch {
+      setError('Speech recognition native module is unavailable. Please use a development build.');
+      return false;
+    }
+  }
 
   function normalize(text: string) {
     return text.replace(/\s+/g, ' ').trim();
@@ -133,7 +179,7 @@ export function useRecording() {
     }
 
     if (event.error === 'language-not-supported') {
-      setError('目前裝置的語音辨識不支援你選的語言，已自動改用可用語言。');
+      setError('The selected speech recognition language is not supported on this device.');
     } else {
       setError(event.message ?? 'Speech recognition error');
     }
@@ -189,9 +235,13 @@ export function useRecording() {
     ignoreResultRef.current = false;
     resetCapture();
 
+    if (!ensureSpeechModuleAvailable()) {
+      return false;
+    }
+
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
-      setError('需要麥克風權限');
+      setError('Microphone permission is required.');
       return false;
     }
 
@@ -230,7 +280,7 @@ export function useRecording() {
           continuous: true,
         });
       } catch (e: any) {
-        setError(e?.message ?? '語音辨識啟動失敗');
+        setError(e?.message ?? 'Failed to start speech recognition.');
         return false;
       }
     }
@@ -263,7 +313,6 @@ export function useRecording() {
       }
 
       stopTimeoutRef.current = setTimeout(() => {
-        // If recognizer doesn't emit end/result in time, fallback to current text and force stop.
         const timeoutText = getCombinedText() || fallbackText;
         ignoreResultRef.current = true;
         try {

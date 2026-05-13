@@ -1,160 +1,158 @@
-﻿# HANDOVER - SimpleTranslator
+# HANDOVER - SimpleTranslator
 
-更新日期：2026-04-25
+更新日期：2026-05-14
 
 ## 一、專案定位
 
-本專案為 React Native（Expo）版多語翻譯 App，包含文字翻譯與語音翻譯。
+SimpleTranslator 是 React Native（Expo）版行動翻譯 App，提供文字翻譯、按住說話翻譯、翻譯後語音播放與 Google Mobile Ads 橫幅廣告。
+
+本版本沒有使用 AI / LLM。翻譯使用 MyMemory API，語音辨識與播放使用裝置原生語音服務。
 
 目前已確認：
+
 - Flutter 程式碼已移除
 - 相機/相簿 OCR 功能已移除
-- Android 可產出 release APK
+- Android 實機 Development Build 已成功測試語音辨識與廣告
+- 封閉測試版本：`1.0.3` / Android `versionCode 2`
 
 ## 二、目前功能清單
 
 1. 文字翻譯
 - 輸入文字後呼叫 MyMemory 翻譯
 - 成功後寫入訊息歷史
+- 可清除歷史
 - 支援來源/目標語言切換
 
-2. 語音翻譯
+2. 語言切換
+- 來源語言與目標語言下拉選單
+- 語言搜尋
+- 一鍵交換來源/目標語言
+- 語言名稱可切換中文/英文顯示
+
+3. 語音翻譯
 - 交互方式：按住錄音，放開送出
-- 最短錄音保護：少於 2 秒會自動補足時間再停止
+- 最短錄音保護：少於 3 秒會自動補足時間再停止
 - 放開後會額外等待 1 秒再停辨識，減少尾音被截斷
 - 錄音停止後才送翻譯，不再持續收音
-- 佇列機制：可在背景翻譯時繼續錄下一句
-- 併發上限：2 條翻譯流程並行
+- 背景佇列：可在翻譯/TTS 處理時繼續錄下一句
 - UI 顯示 STT / 翻譯 / TTS 耗時
 - 可手動停止轉錄、可清空佇列
 
-3. 設定頁
-- 服務架構資訊頁（非 API Key 設定頁）
+4. 語音播放
+- 翻譯完成後自動 TTS 播放
+- 播放前會先停止上一段語音，避免重疊
+- TTS 設有 timeout，避免播放 callback 不回來時卡住流程
+
+5. 廣告
+- 使用 `react-native-google-mobile-ads`
+- 目前接 Google 官方測試 App ID / Banner ID
+- 廣告顯示於非語音頁底部，語音頁避免干擾錄音流程
+
+6. 設定頁
+- 顯示 STT / 翻譯 / TTS / Ads 服務來源
+- 提醒 Expo Go 不包含語音辨識與廣告原生模組
 
 ## 三、技術架構
 
-- 前端框架：React Native 0.81 + Expo 54
-- 語言：TypeScript
-- 狀態管理：Zustand + AsyncStorage
-- STT：expo-speech-recognition
-- 翻譯：MyMemory API
-- TTS：expo-speech
+- React Native 0.81 + Expo SDK 54
+- TypeScript
+- Zustand + AsyncStorage
+- STT：`expo-speech-recognition`
+- 翻譯：`MyMemory API`
+- TTS：`expo-speech`
+- Ads：`react-native-google-mobile-ads`
 
-資料流程（語音模式）：
+語音模式資料流程：
+
 1. `useRecording.startListening()` 開始收音
 2. 放開按鈕觸發 `stopListening()` 取得文字
 3. 文字 enqueue 到 `VoiceScreen` queue
 4. queue worker 呼叫 `useTranslation.translateWithMetrics()`
-5. 翻譯完成後即時自 queue 減 1
+5. 翻譯完成後自 queue 移除
 6. 背景執行 TTS 播放並回填 ttsMs
-
-重要修正：
-- `VoiceScreen` 的 queue worker 不能在 effect cleanup 裡用區域 `active` flag 擋住整個流程，否則會讓 `setQueue` 後的重 render 中斷翻譯、TTS 與 queue 更新
-- `useTranslation.speakWithTiming()` 會先 `Speech.stop()` 再播，避免殘留播放狀態影響下一句
 
 ## 四、支援語言
 
-- `zh` 中文
-- `en` 英文
-- `ja` 日文
-- `vi` 越文
-- `ko` 韓文
-- `pt` 葡文
-- `es` 西文
-- `ru` 俄文
-- `nan` 台語
-- `fr` 法文
-- `de` 德文
+支援語言代碼：
+
+`af`, `ar`, `bg`, `bn`, `ca`, `cs`, `da`, `de`, `el`, `en`, `es`, `et`, `fa`, `fi`, `fil`, `fr`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `ko`, `lt`, `lv`, `ms`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sr`, `sv`, `sw`, `ta`, `te`, `th`, `tr`, `uk`, `ur`, `vi`, `zh`, `nan`
+
+`nan` 目前映射為 `zh-TW`。
 
 ## 五、關鍵程式檔案
 
-- `App.tsx`：主頁籤容器、SafeArea 與底部 Tab
+- `App.tsx`：主頁籤容器、SafeArea、底部 Tab、Ads Banner
 - `screens/TextScreen.tsx`：文字翻譯 UI
 - `screens/VoiceScreen.tsx`：語音錄音、佇列、耗時與結果列表
-- `components/LanguageSwitcher.tsx`：語言選單切換
-- `hooks/useRecording.ts`：錄音生命週期與轉錄事件處理
+- `screens/SettingsScreen.tsx`：服務來源與限制說明
+- `components/LanguageSwitcher.tsx`：語言選單、搜尋與交換
+- `hooks/useRecording.ts`：語音辨識生命週期與事件處理
 - `hooks/useTranslation.ts`：翻譯與 TTS 時間統計
-- `services/translateService.ts`：MyMemory API 呼叫與切段翻譯
+- `services/translateService.ts`：MyMemory API 呼叫、切段與快取
 - `store/useAppStore.ts`：全域語言與訊息資料
 
 ## 六、環境與啟動
 
-1. 安裝
+安裝：
+
 ```bash
 npm install
 ```
 
-2. 啟動 Expo
+Expo LAN：
+
 ```bash
 npm run start:clear
 ```
 
-3. Android Native
+Android 實機 Development Build：
+
 ```bash
-npm run android
+npx expo run:android --device
 ```
 
-4. 型別檢查
+型別檢查：
+
 ```bash
 npx tsc --noEmit
 ```
 
-## 七、Release 與產物
+## 七、封閉測試打包
 
-建議一鍵打包（含鎖檔修復）：
-```bash
-npm run build:release:apk
-```
+本機 AAB：
 
-這版 release 相關設定：
-- `newArchEnabled=false`
-- `app.json` splash icon 指向新版 `assets/icon.png`
-- Android native `splashscreen_logo.png` 已同步替換
-
-只修鎖檔（`.git` / `.gradle`）：
-```bash
-npm run fix:locks
-```
-
-若 `.git/index.lock` 權限被破壞（需系統管理員）：
-```bash
-npm run fix:git:acl:admin
-```
-
-APK（Release）：
-```bash
-cd android
-gradlew.bat assembleRelease
-```
-
-輸出路徑：
-- `android/app/build/outputs/apk/release/app-release.apk`
-
-AAB（上架建議）：
 ```bash
 cd android
 gradlew.bat bundleRelease
 ```
 
-輸出路徑：
-- `android/app/build/outputs/bundle/release/app-release.aab`
+輸出：
+
+```text
+android/app/build/outputs/bundle/release/app-release.aab
+```
+
+EAS Production AAB：
+
+```bash
+npm run eas:build:android
+```
+
+Submit 到 Google Play internal draft：
+
+```bash
+npm run eas:submit:android:closed
+```
 
 ## 八、部署注意事項
 
-- `android/gradle.properties` 的 `reactNativeArchitectures=arm64-v8a` 不可更改。
-- 目前 release build 使用 debug signing，僅適合測試分發。
-- 若要上 Google Play，需改為正式 keystore 簽章。
-- App icon 更新後若手機不顯示新圖示，請先移除舊版 App 再安裝。
-- 若 Windows 發生 Gradle transforms lock，請優先使用 `npm run build:release:apk`（已固定單工參數與多快取 fallback 路徑）。
+- Expo Go 不可用於測試 `expo-speech-recognition` 與 `react-native-google-mobile-ads`。
+- Play Console 封閉測試請上傳 AAB。
+- 上傳 Play Console 前需確認 release 使用正式 keystore，不要使用 debug signing。
+- 版本已更新為 `1.0.3`，Android `versionCode 2`。
 
 ## 九、已知問題與建議
 
-- STT 品質與速度依賴手機語音服務與網路。
+- STT 品質與速度依賴手機語音服務、語言包與網路品質。
+- MyMemory 免費方案有流量限制，正式產品應評估備援或付費方案。
 - queue 為記憶體型，關閉 App 後未處理佇列不保留。
-
-## 十、建議下一步
-
-1. 補正式簽章（keystore）與 Play Store 上架設定。
-2. 清理所有 UI 文字編碼與 i18n 結構化。
-3. 為 MyMemory 加入 timeout/retry/backoff。
-4. 補 E2E smoke test（文字/語音/佇列流程）。

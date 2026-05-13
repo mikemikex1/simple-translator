@@ -2,7 +2,7 @@
   "expo": {
     "name": "SimpleTranslator",
     "slug": "SimpleTranslator",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -29,6 +29,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
+      "versionCode": 2,
       "package": "com.anonymous.SimpleTranslator"
     },
     "web": {
@@ -37,12 +38,24 @@
     "plugins": [
       "expo-secure-store",
       [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Allow SimpleTranslator to access your microphone for voice translation.",
           "speechRecognitionPermission": "Allow SimpleTranslator to use speech recognition."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a40a6386-bb0f-4e61-a0e8-85b42fca90ff"
+      }
+    }
   }
 }

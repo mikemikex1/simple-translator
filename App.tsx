@@ -2,6 +2,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { StatusBar } from 'expo-status-bar';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -20,6 +21,7 @@ const TABS = [
 ] as const;
 
 const HIDE_LANG_SWITCHER = ['settings'];
+const BANNER_UNIT_ID = process.env.EXPO_PUBLIC_ADMOB_BANNER_ID?.trim() || TestIds.BANNER;
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,6 +40,7 @@ function AppContent() {
 
   const currentKey = TABS[currentPage].key;
   const showLang = !HIDE_LANG_SWITCHER.includes(currentKey);
+  const showBanner = currentKey !== 'voice';
 
   return (
     <SafeAreaView
@@ -61,6 +64,11 @@ function AppContent() {
         <View key="voice"><VoiceScreen isActive={currentKey === 'voice'} /></View>
         <View key="settings"><SettingsScreen /></View>
       </PagerView>
+      {showBanner && (
+        <View style={styles.adWrap}>
+          <BannerAd unitId={BANNER_UNIT_ID} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      )}
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         {TABS.map((tab, i) => (
           <TouchableOpacity
@@ -95,6 +103,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     backgroundColor: '#fff',
+  },
+  adWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingTop: 4,
   },
   tab: {
     flex: 1,

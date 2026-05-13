@@ -8,21 +8,26 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.label}>語音辨識（STT）</Text>
-        <Text style={styles.value}>Google 語音辨識（免費）</Text>
+        <Text style={styles.value}>裝置語音服務 / expo-speech-recognition</Text>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>翻譯服務</Text>
-        <Text style={styles.value}>MyMemory（免費，每日 1000 詞）</Text>
+        <Text style={styles.value}>MyMemory API（非 AI 翻譯模型）</Text>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>語音播放（TTS）</Text>
-        <Text style={styles.value}>裝置內建語音引擎（免費）</Text>
+        <Text style={styles.value}>裝置語音播放 / expo-speech</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>廣告</Text>
+        <Text style={styles.value}>Google Mobile Ads 測試廣告單元</Text>
       </View>
 
       <Text style={styles.note}>
-        本應用程式所有功能完全免費，無需 API Key。
+        本版本不需要使用者輸入 API Key。語音辨識與廣告需使用 Development Build 或正式安裝包測試，Expo Go 不包含這些原生模組。
       </Text>
     </View>
   );

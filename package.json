@@ -1,6 +1,6 @@
 {
   "name": "simpletranslator",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "main": "index.ts",
   "scripts": {
     "start": "expo start --lan",
@@ -12,7 +12,9 @@
     "start:clear": "expo start --lan --clear",
     "fix:locks": "powershell -ExecutionPolicy Bypass -File scripts/fix-locks.ps1",
     "fix:git:acl:admin": "powershell -ExecutionPolicy Bypass -File scripts/fix-git-acl-admin.ps1",
-    "build:release:apk": "powershell -ExecutionPolicy Bypass -File scripts/release-apk.ps1"
+    "build:release:apk": "powershell -ExecutionPolicy Bypass -File scripts/release-apk.ps1",
+    "eas:build:android": "eas build -p android --profile production",
+    "eas:submit:android:closed": "eas submit -p android --profile production"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -24,6 +26,7 @@
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-google-mobile-ads": "^15.8.3",
     "react-native-pager-view": "6.9.1",
     "react-native-safe-area-context": "^5.7.0",
     "zustand": "^5.0.12"

@@ -38,9 +38,7 @@ export default function TextScreen() {
         keyExtractor={(m) => m.id}
         renderItem={({ item }) => <ChatBubble msg={item} />}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <Text style={styles.empty}>輸入文字並按翻譯</Text>
-        }
+        ListEmptyComponent={<Text style={styles.empty}>輸入文字開始翻譯</Text>}
       />
       {error && <Text style={styles.error}>{error}</Text>}
       <View style={styles.inputRow}>
@@ -48,7 +46,7 @@ export default function TextScreen() {
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder="輸入文字..."
+          placeholder="輸入要翻譯的文字..."
           multiline
           returnKeyType="default"
         />
@@ -62,7 +60,7 @@ export default function TextScreen() {
       </View>
       {messages.length > 0 && (
         <TouchableOpacity onPress={clearMessages} style={styles.clearBtn}>
-          <Text style={styles.clearText}>清除記錄</Text>
+          <Text style={styles.clearText}>清除歷史</Text>
         </TouchableOpacity>
       )}
     </KeyboardAvoidingView>
