@@ -119,6 +119,19 @@ npx tsc --noEmit
 
 ## 七、封閉測試打包
 
+Google Play 上傳金鑰由 EAS 託管：
+
+- EAS Configuration: `Build Credentials Qh1YGkHi4p (Default)`
+- Keystore Type: `JKS`
+- Key Alias: `38509af6c844affb0a7a87cf8f158889`
+- SHA1: `3A:E3:86:67:4A:D3:B2:F5:AB:9E:20:33:33:C6:0A:7F:78:84:17:D8`
+- SHA256: `5D:87:DA:75:F3:E2:E0:D5:C8:6A:87:51:66:6B:00:D0:CD:8D:60:CC:62:79:65:3F:8B:4F:31:40:FE:42:2E:E6`
+- MD5: `01:96:98:CD:28:A7:C8:F9:14:AC:93:AF:E2:DE:CA:47`
+- Play Console service account: `play-console-release-bot@simpletranslator-495516.iam.gserviceaccount.com`
+- GCP project ID: `simpletranslator-495516`
+
+敏感資料不可提交 Git：`.jks`、keystore password、key password、credentials JSON。請將 EAS 下載的 keystore 與密碼做離線備份。
+
 本機 AAB：
 
 ```bash
