@@ -61,7 +61,7 @@ export function useRecording() {
   const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recognizedText, setRecognizedText] = useState<string | null>(null);
-  const { sourceLang } = useAppStore();
+  const { sourceLang, useCloudSTT } = useAppStore();
 
   const resolveRef = useRef<((text: string | null) => void) | null>(null);
   const stopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -260,7 +260,7 @@ export function useRecording() {
     const installedLang =
       pickBestLocale(installedLocales, selectedLang) ??
       pickBestLocale(installedLocales, fallbackLang);
-    const useOnDevice = onDeviceSupported && !!installedLang;
+    const useOnDevice = !useCloudSTT && onDeviceSupported && !!installedLang;
     if (useOnDevice && installedLang) {
       selectedLang = installedLang;
     }

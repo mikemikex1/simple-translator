@@ -1,10 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Switch } from 'react-native';
+import { useAppStore } from '../store/useAppStore';
 
 export default function SettingsScreen() {
+  const { useCloudSTT, setUseCloudSTT } = useAppStore();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>關於 SimpleTranslator</Text>
+
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>使用雲端語音辨識</Text>
+            <Text style={styles.hint}>
+              開啟可降低中文同音字辨識錯誤（如「是→4」「南→男」），需網路連線
+            </Text>
+          </View>
+          <Switch value={useCloudSTT} onValueChange={setUseCloudSTT} />
+        </View>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>語音辨識（STT）</Text>
@@ -46,7 +61,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   label: { fontSize: 12, color: '#888' },
   value: { fontSize: 14, fontWeight: '600', color: '#333' },
+  hint: { fontSize: 12, color: '#888', marginTop: 4, lineHeight: 16 },
   note: { color: '#777', fontSize: 12, lineHeight: 18, marginTop: 8 },
 });

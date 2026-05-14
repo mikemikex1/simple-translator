@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import RecordButton from '../components/RecordButton';
 import { useRecording } from '../hooks/useRecording';
 import { useTranslation } from '../hooks/useTranslation';
@@ -48,6 +48,8 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   const [results, setResults] = useState<VoiceResult[]>([]);
   const [queue, setQueue] = useState<QueuedVoiceItem[]>([]);
   const [recordingNotice, setRecordingNotice] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   const sessionLangRef = useRef<{ fromLang: Language; toLang: Language }>({
     fromLang: sourceLang,
@@ -214,6 +216,44 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
     setQueue([]);
   }
 
+  function beginEdit(item: VoiceResult) {
+    setEditingId(item.id);
+    setEditingText(item.original);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditingText('');
+  }
+
+  async function confirmEdit(item: VoiceResult) {
+    const newText = editingText.trim();
+    setEditingId(null);
+    setEditingText('');
+    if (!newText || newText === item.original) return;
+
+    const { translated, translationMs } = await translateWithMetrics(newText, {
+      fromLang: item.fromLang,
+      toLang: item.toLang,
+      speak: false,
+    });
+    if (!mountedRef.current || !translated) return;
+
+    setResults((prev) =>
+      prev.map((r) =>
+        r.id === item.id
+          ? { ...r, original: newText, translated, translationMs, ttsMs: 0 }
+          : r,
+      ),
+    );
+
+    ttsChainRef.current = ttsChainRef.current.then(async () => {
+      const ttsMs = await speakTextWithTiming(translated, item.toLang);
+      if (!mountedRef.current) return;
+      setResults((prev) => prev.map((r) => (r.id === item.id ? { ...r, ttsMs } : r)));
+    });
+  }
+
   const busy = transcribing || pendingCount > 0;
   const error = recErr || transErr;
 
@@ -263,8 +303,36 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
             <Text style={styles.langTag}>
               {r.fromLang} {'->'} {r.toLang}
             </Text>
-            <Text style={styles.original}>{r.original}</Text>
-            <Text style={styles.translated}>{r.translated}</Text>
+            {editingId === r.id ? (
+              <>
+                <TextInput
+                  style={styles.editInput}
+                  value={editingText}
+                  onChangeText={setEditingText}
+                  multiline
+                  autoFocus
+                  placeholder="修正辨識結果後重新翻譯"
+                />
+                <View style={styles.editBtnRow}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={cancelEdit}>
+                    <Text style={styles.cancelBtnText}>取消</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.confirmBtn} onPress={() => confirmEdit(r)}>
+                    <Text style={styles.confirmBtnText}>重新翻譯</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.originalRow}>
+                  <Text style={[styles.original, { flex: 1 }]}>{r.original}</Text>
+                  <TouchableOpacity style={styles.editBtn} onPress={() => beginEdit(r)}>
+                    <Text style={styles.editBtnText}>編輯</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.translated}>{r.translated}</Text>
+              </>
+            )}
             <Text style={styles.timing}>
               STT {r.sttMs}ms | 翻譯 {r.translationMs}ms | TTS {r.ttsMs}ms
             </Text>
@@ -316,7 +384,40 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   langTag: { fontSize: 12, color: '#7b8594' },
+  originalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   original: { fontSize: 15, color: '#555' },
   translated: { fontSize: 17, color: '#3366ff', fontWeight: '600' },
   timing: { fontSize: 12, color: '#8a8a8a' },
+  editBtn: {
+    backgroundColor: '#eef1f6',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  editBtnText: { fontSize: 12, color: '#3366ff', fontWeight: '600' },
+  editInput: {
+    fontSize: 15,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ccd',
+    borderRadius: 6,
+    padding: 8,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  editBtnRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  cancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#eee',
+  },
+  cancelBtnText: { fontSize: 13, color: '#555' },
+  confirmBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#3366ff',
+  },
+  confirmBtnText: { fontSize: 13, color: '#fff', fontWeight: '700' },
 });

@@ -45,10 +45,12 @@ interface AppState {
   sourceLang: Language;
   targetLang: Language;
   messages: Message[];
+  useCloudSTT: boolean;
   setLanguages: (source: Language, target: Language) => void;
   swapLanguages: () => void;
   addMessage: (msg: Message) => void;
   clearMessages: () => void;
+  setUseCloudSTT: (value: boolean) => void;
   loadSettings: () => Promise<void>;
 }
 
@@ -56,6 +58,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   sourceLang: 'zh',
   targetLang: 'en',
   messages: [],
+  useCloudSTT: true,
 
   setLanguages: (source, target) => {
     set({ sourceLang: source, targetLang: target });
@@ -74,10 +77,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   clearMessages: () => set({ messages: [] }),
 
+  setUseCloudSTT: (value) => {
+    set({ useCloudSTT: value });
+    AsyncStorage.setItem('useCloudSTT', value ? '1' : '0');
+  },
+
   loadSettings: async () => {
-    const [source, target] = await Promise.all([
+    const [source, target, cloudStt] = await Promise.all([
       AsyncStorage.getItem('sourceLang'),
       AsyncStorage.getItem('targetLang'),
+      AsyncStorage.getItem('useCloudSTT'),
     ]);
 
     if (source && SUPPORTED_LANGUAGES.includes(source as Language)) {
@@ -85,6 +94,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     if (target && SUPPORTED_LANGUAGES.includes(target as Language)) {
       set({ targetLang: target as Language });
+    }
+    if (cloudStt !== null) {
+      set({ useCloudSTT: cloudStt === '1' });
     }
   },
 }));
