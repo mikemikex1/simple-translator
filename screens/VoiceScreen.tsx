@@ -66,10 +66,10 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
     fromLang: sourceLang,
     toLang: targetLang,
   });
-  const pressInAtRef = useRef<number | null>(null);
+  const startedAtRef = useRef<number | null>(null);
   const finalizingRef = useRef(false);
-  const pressedRef = useRef(false);
-  const releaseRequestedRef = useRef(false);
+  const activeRef = useRef(false);
+  const stopRequestedRef = useRef(false);
   const processingIdRef = useRef<string | null>(null);
   const ttsChainRef = useRef<Promise<void>>(Promise.resolve());
   const mountedRef = useRef(true);
@@ -87,10 +87,10 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
   );
   const pendingCount = queue.length;
 
-  function resetPressState() {
-    pressedRef.current = false;
-    releaseRequestedRef.current = false;
-    pressInAtRef.current = null;
+  function resetSessionState() {
+    activeRef.current = false;
+    stopRequestedRef.current = false;
+    startedAtRef.current = null;
     finalizingRef.current = false;
   }
 
@@ -116,31 +116,31 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
 
     setRecordingNotice(null);
     sessionLangRef.current = { fromLang: sourceLang, toLang: targetLang };
-    pressInAtRef.current = Date.now();
-    pressedRef.current = true;
-    releaseRequestedRef.current = false;
+    startedAtRef.current = Date.now();
+    activeRef.current = true;
+    stopRequestedRef.current = false;
 
     startListening().then((started) => {
       if (!started) {
-        resetPressState();
+        resetSessionState();
       }
     });
   }
 
   async function finalizeCurrentRecording() {
     if (finalizingRef.current) return;
-    if (!pressedRef.current) return;
+    if (!activeRef.current) return;
 
     if (!listening) {
-      releaseRequestedRef.current = true;
+      stopRequestedRef.current = true;
       return;
     }
 
     finalizingRef.current = true;
-    releaseRequestedRef.current = false;
+    stopRequestedRef.current = false;
 
     try {
-      const startedAt = pressInAtRef.current ?? Date.now();
+      const startedAt = startedAtRef.current ?? Date.now();
       const elapsed = Date.now() - startedAt;
 
       if (elapsed < MIN_RECORD_MS) {
@@ -156,18 +156,27 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
       const text = await stopListening();
       enqueueText(text, sttMs);
     } finally {
-      resetPressState();
+      resetSessionState();
+    }
+  }
+
+  function toggleRecording() {
+    if (transcribing || finalizingRef.current) return;
+    if (activeRef.current) {
+      void finalizeCurrentRecording();
+    } else {
+      beginRecordSession();
     }
   }
 
   useEffect(() => {
-    if (listening && pressedRef.current && releaseRequestedRef.current && !finalizingRef.current) {
+    if (listening && activeRef.current && stopRequestedRef.current && !finalizingRef.current) {
       void finalizeCurrentRecording();
     }
   }, [listening]);
 
   useEffect(() => {
-    if (!isActive && pressedRef.current) {
+    if (!isActive && activeRef.current) {
       void finalizeCurrentRecording();
     }
   }, [isActive, listening]);
@@ -283,16 +292,15 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
         <RecordButton
           recording={listening}
           transcribing={transcribing}
-          onPressIn={beginRecordSession}
-          onPressOut={finalizeCurrentRecording}
+          onToggle={toggleRecording}
         />
 
         <Text style={styles.hint}>
           {listening
-            ? '錄音中，放開即可送出翻譯'
+            ? '錄音中，點擊按鈕送出翻譯'
             : busy
               ? `處理中：執行 ${processingCount} / 等待 ${queuedCount} / 總佇列 ${pendingCount}`
-              : '按住錄音，放開後會自動翻譯並語音回覆'}
+              : '點擊開始錄音，再點一次送出翻譯'}
         </Text>
 
         {(listening || transcribing) && (
@@ -300,7 +308,7 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
             style={styles.stopBtn}
             onPress={() => {
               cancelTranscribing();
-              resetPressState();
+              resetSessionState();
             }}
           >
             <Text style={styles.stopBtnText}>停止轉錄</Text>

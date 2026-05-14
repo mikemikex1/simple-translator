@@ -4,11 +4,10 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-nat
 interface Props {
   recording: boolean;
   transcribing: boolean;
-  onPressIn: () => void;
-  onPressOut: () => void;
+  onToggle: () => void;
 }
 
-export default function RecordButton({ recording, transcribing, onPressIn, onPressOut }: Props) {
+export default function RecordButton({ recording, transcribing, onToggle }: Props) {
   if (transcribing) {
     return (
       <TouchableOpacity style={[styles.btn, styles.loading]} disabled>
@@ -21,12 +20,11 @@ export default function RecordButton({ recording, transcribing, onPressIn, onPre
   return (
     <TouchableOpacity
       style={[styles.btn, recording && styles.active]}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPress={onToggle}
       activeOpacity={0.8}
     >
-      <Text style={styles.icon}>{recording ? '🎙️' : '🎤'}</Text>
-      <Text style={styles.label}>{recording ? '放開即翻譯' : '按住說話'}</Text>
+      <Text style={styles.icon}>{recording ? '⏹️' : '🎤'}</Text>
+      <Text style={styles.label}>{recording ? '點擊送出翻譯' : '點擊開始錄音'}</Text>
     </TouchableOpacity>
   );
 }
