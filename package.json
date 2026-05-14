@@ -1,6 +1,6 @@
 {
   "name": "simpletranslator",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "index.ts",
   "scripts": {
     "start": "expo start --lan",
@@ -20,6 +20,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.33",
     "expo-av": "~16.0.8",
+    "expo-clipboard": "~8.0.8",
     "expo-secure-store": "~15.0.8",
     "expo-speech": "~14.0.8",
     "expo-speech-recognition": "^3.1.3",

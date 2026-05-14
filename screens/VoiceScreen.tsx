@@ -1,5 +1,16 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ToastAndroid,
+  Platform,
+  Alert,
+} from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import RecordButton from '../components/RecordButton';
 import { useRecording } from '../hooks/useRecording';
 import { useTranslation } from '../hooks/useTranslation';
@@ -216,6 +227,15 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
     setQueue([]);
   }
 
+  async function copyText(text: string) {
+    await Clipboard.setStringAsync(text);
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('已複製', ToastAndroid.SHORT);
+    } else {
+      Alert.alert('已複製');
+    }
+  }
+
   function beginEdit(item: VoiceResult) {
     setEditingId(item.id);
     setEditingText(item.original);
@@ -326,11 +346,22 @@ export default function VoiceScreen({ isActive }: VoiceScreenProps) {
               <>
                 <View style={styles.originalRow}>
                   <Text style={[styles.original, { flex: 1 }]}>{r.original}</Text>
+                  <TouchableOpacity style={styles.copyBtn} onPress={() => copyText(r.original)}>
+                    <Text style={styles.copyBtnText}>複製</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity style={styles.editBtn} onPress={() => beginEdit(r)}>
                     <Text style={styles.editBtnText}>編輯</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.translated}>{r.translated}</Text>
+                <View style={styles.originalRow}>
+                  <Text style={[styles.translated, { flex: 1 }]}>{r.translated}</Text>
+                  <TouchableOpacity
+                    style={styles.copyBtn}
+                    onPress={() => copyText(r.translated)}
+                  >
+                    <Text style={styles.copyBtnText}>複製</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
             <Text style={styles.timing}>
@@ -395,6 +426,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   editBtnText: { fontSize: 12, color: '#3366ff', fontWeight: '600' },
+  copyBtn: {
+    backgroundColor: 'rgba(51, 102, 255, 0.1)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  copyBtnText: { fontSize: 12, color: '#3366ff', fontWeight: '600' },
   editInput: {
     fontSize: 15,
     color: '#333',
